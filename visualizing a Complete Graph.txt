@@ -1,0 +1,33 @@
+
+import networkx as nx
+import matplotlib.pyplot as plt
+
+def draw_complete_graph():
+    print("--- Complete Graph Generator ---")
+    while True:
+        try:
+            n = int(input("Enter the number of vertices (must be greater than 3): "))
+            if n > 3:
+                break
+            else:
+                print("Error: The number of vertices must be strictly greater than 3.")
+        except ValueError:
+            print("Invalid input. Please enter a valid integer.")
+    G = nx.complete_graph(n)
+    plt.figure(figsize=(8, 8))
+    pos = nx.circular_layout(G)
+    nx.draw(G, pos,
+            with_labels=True,
+            node_color='#3498db',  # Blue nodes
+            edge_color='#2c3e50',  # Dark grey edges
+            node_size=1000,
+            font_size=12,
+            font_color='white',
+            font_weight='bold')
+    total_edges = (n * (n - 1)) // 2
+    plt.title(f"Complete Graph ($K_{{{n}}}$)\nVertices: {n} | Edges: {total_edges}", fontsize=14)
+    print(f"\nSuccessfully generated a complete graph with {n} vertices and {total_edges} edges.")
+    plt.show()
+if __name__ == "__main__":
+    # Ensure you have the libraries installed: pip install networkx matplotlib
+    draw_complete_graph()
