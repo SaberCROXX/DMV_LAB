@@ -1,0 +1,9 @@
+import matplotlib.pyplot as plt
+x = [2, 4, 6, 8, 10, 12, 14, 16, 18, 20]
+y = [5, 9, 7, 12, 10, 15, 13, 18, 16, 20]
+plt.step(x, y) 
+plt.title("Stair Plot") 
+plt.xlabel("X")
+plt.ylabel("Y") 
+plt.grid() 
+plt.show()
