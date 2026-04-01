@@ -1,0 +1,26 @@
+import matplotlib.pyplot as plt
+import matplotlib.animation as animation 
+mport numpy as np
+from collections import deque
+fig, ax = plt.subplots(figsize=(10, 8)) 
+ax.set_xlim(0, 100)
+ax.set_ylim(0, 100) 
+ax.grid(True, alpha=0.3)
+ax.set_title('Real-time Data Streaming', fontsize=14) 
+ax.set_xlabel('Time')
+ax.set_ylabel('Value')
+scat = ax.scatter([], [], c='blue', s=50, alpha=0.6) 
+max_points = 50
+x_data = deque(maxlen=max_points) 
+y_data = deque(maxlen=max_points) 
+def update(frame):
+	new_x = frame
+	new_y = 50 + 30 * np.sin(frame * 0.1) + np.random.randn() * 5 	x_data.append(new_x)
+	y_data.append(new_y) scat.set_offsets(np.c_[list(x_data), list(y_data)]) 
+	if frame > max_points:
+		ax.set_xlim(frame - max_points, frame)
+ax.set_title(f'Real-time Data - Latest Value: {new_y:.2f}', fontsize=14)
+ 
+	return scat,
+ani = animation.FuncAnimation(fig, update, frames=200, interval=100, blit=True) plt.tight_layout()
+plt.show()

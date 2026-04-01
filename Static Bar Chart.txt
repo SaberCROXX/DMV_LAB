@@ -1,0 +1,16 @@
+import matplotlib.pyplot as plt 
+import numpy as np
+categories = ['A', 'B', 'C', 'D', 'E'] 
+values = [25, 40, 30, 55, 45]
+fig, ax = plt.subplots(figsize=(10, 6))
+bars = ax.bar(categories, values, color='steelblue', edgecolor='black', linewidth=1.5) 
+ax.set_title('Static Bar Chart', fontsize=16, pad=20)
+ax.set_xlabel('Categories', fontsize=12) 
+ax.set_ylabel('Values', fontsize=12) 
+x.grid(axis='y', alpha=0.3)
+for bar, value in zip(bars, values): 
+	height = bar.get_height()
+	ax.text(bar.get_x() + bar.get_width()/2., height, f'{value}', ha='center', va='bottom', fontsize=10)
+
+plt.tight_layout() 
+plt.show()
