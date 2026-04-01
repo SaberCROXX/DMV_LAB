@@ -1,0 +1,10 @@
+import matplotlib.pyplot as plt 
+n = [12, 27, 3, 19, 34, 8, 21, 5, 30, 16, 
+2, 25, 11, 35, 7, 18, 29, 14, 9, 22, 
+4, 31, 17, 6, 28, 13, 24, 1, 20, 33] 
+l = [] 
+for i in range(len(n)): 
+l.append("N" + str(i+1)) 
+plt.pie(numbers, l=l,) 
+plt.title("Pie Chart of Given Numbers") 
+plt.show()
