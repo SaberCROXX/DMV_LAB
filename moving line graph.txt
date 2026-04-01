@@ -1,0 +1,30 @@
+import pygame as pg 
+import sys 
+import random as r 
+pg.init() 
+w = 600 
+h = 400 
+scr = pg.display.set_mode((w, h)) 
+pg.display.set_caption("Animated Line Graph") 
+clk = pg.time.Clock() 
+pts = [] 
+x = 0 
+sp = 5 
+run = True 
+while run: 
+    clk.tick(60) 
+    for e in pg.event.get(): 
+        if e.type == pg.QUIT: 
+            run = False 
+    y = r.randint(50, h-50) 
+    pts.append((x, y))   
+    x = x + sp 
+    if x > w: 
+        x = 0 
+        pts = [] 
+    scr.fill((0, 0, 0)) 
+    if len(pts) > 1: 
+        pg.draw.lines(scr, (0, 255, 0), False, pts, 2) 
+    pg.display.update() 
+pg.quit() 
+sys.exit() 

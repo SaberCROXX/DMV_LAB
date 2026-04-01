@@ -1,0 +1,26 @@
+import pygame as pg 
+import sys 
+pg.init() 
+w = 600 
+h = 400 
+scr = pg.display.set_mode((w, h)) 
+pg.display.set_caption("Moving Circle") 
+x = 50 
+y = h // 2 
+r = 20 
+sp = 5 
+clk = pg.time.Clock() 
+run = True 
+while run: 
+    clk.tick(60) 
+    for e in pg.event.get(): 
+        if e.type == pg.QUIT: 
+            run = False 
+    x = x + sp 
+    if x > w - r or x < r: 
+        sp = -sp 
+    scr.fill((0, 0, 0)) 
+    pg.draw.circle(scr, (0, 255, 0), (x, y), r) 
+    pg.display.update() 
+pg.quit() 
+sys.exit()
