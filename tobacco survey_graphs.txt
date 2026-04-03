@@ -1,0 +1,243 @@
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+plt.style.use('seaborn-v0_8-darkgrid')
+sns.set_palette("husl")
+
+df = pd.read_csv("C:/Users/anjis/OneDrive/Desktop/survey dataset about tobacco use among students.csv")
+
+df.columns = df.columns.str.strip()
+
+print("Dataset shape:", df.shape)
+
+df_line = df[(df['Area'] == 'Total') & (df['State/UT'] != 'India')].copy()
+
+df_line['Current tobacco users (%)'] = pd.to_numeric(df_line['Current tobacco users (%)'], errors='coerce')
+df_line['Current tobacco smokers (%)'] = pd.to_numeric(df_line['Current tobacco smokers (%)'], errors='coerce')
+df_line['Current smokeless tobacco users (%)'] = pd.to_numeric(df_line['Current smokeless tobacco users (%)'], errors='coerce')
+
+df_line = df_line.dropna(subset=['Current tobacco users (%)'])
+df_line = df_line.nlargest(10, 'Current tobacco users (%)')
+
+fig, ax = plt.subplots(figsize=(14, 7))
+
+ax.plot(df_line['State/UT'], df_line['Current tobacco users (%)'], 
+        marker='o', linewidth=2, markersize=8, label='Current Tobacco Users', color='#e63946')
+ax.plot(df_line['State/UT'], df_line['Current tobacco smokers (%)'], 
+        marker='s', linewidth=2, markersize=8, label='Current Tobacco Smokers', color='#457b9d')
+ax.plot(df_line['State/UT'], df_line['Current smokeless tobacco users (%)'], 
+        marker='^', linewidth=2, markersize=8, label='Current Smokeless Users', color='#2a9d8f')
+
+ax.set_xlabel('State/UT', fontsize=12, fontweight='bold')
+ax.set_ylabel('Percentage (%)', fontsize=12, fontweight='bold')
+ax.set_title('Top 10 States: Current Tobacco Use Patterns', fontsize=14, fontweight='bold')
+ax.legend(loc='upper left', fontsize=10)
+ax.grid(True, alpha=0.3)
+plt.xticks(rotation=45, ha='right')
+plt.tight_layout()
+plt.savefig('line_graph_tobacco_trends.png', dpi=300, bbox_inches='tight')
+plt.show()
+print("1. Line graph saved ✓")
+
+india_urban = df[(df['State/UT'] == 'India') & (df['Area'] == 'Urban')].iloc[0]
+india_rural = df[(df['State/UT'] == 'India') & (df['Area'] == 'Rural')].iloc[0]
+
+categories_display = ['Ever Users', 'Current Users', 'Ever Smokers', 'Current Smokers', 'Ever Smokeless', 'Current Smokeless']
+
+urban_vals = [
+    float(india_urban['Ever tobacco users (%)']),
+    float(india_urban['Current tobacco users (%)']),
+    float(india_urban['Ever tobacco smokers (%)']),
+    float(india_urban['Current tobacco smokers (%)']),
+    float(india_urban['Ever smokeless tobacco users (%)']),
+    float(india_urban['Current smokeless tobacco users (%)'])
+]
+
+rural_vals = [
+    float(india_rural['Ever tobacco users (%)']),
+    float(india_rural['Current tobacco users (%)']),
+    float(india_rural['Ever tobacco smokers (%)']),
+    float(india_rural['Current tobacco smokers (%)']),
+    float(india_rural['Ever smokeless tobacco users (%)']),
+    float(india_rural['Current smokeless tobacco users (%)'])
+]
+
+x = np.arange(len(categories_display))
+width = 0.35
+
+fig, ax = plt.subplots(figsize=(12, 7))
+bars1 = ax.bar(x - width/2, urban_vals, width, label='Urban', color='#1d3557', edgecolor='black')
+bars2 = ax.bar(x + width/2, rural_vals, width, label='Rural', color='#e63946', edgecolor='black')
+
+for bar in bars1:
+    height = bar.get_height()
+    ax.annotate(f'{height:.1f}%', xy=(bar.get_x() + bar.get_width()/2, height),
+                xytext=(0, 3), textcoords="offset points", ha='center', fontsize=8)
+for bar in bars2:
+    height = bar.get_height()
+    ax.annotate(f'{height:.1f}%', xy=(bar.get_x() + bar.get_width()/2, height),
+                xytext=(0, 3), textcoords="offset points", ha='center', fontsize=8)
+
+ax.set_ylabel('Percentage (%)', fontsize=12, fontweight='bold')
+ax.set_title('India: Urban vs Rural Tobacco Use Comparison', fontsize=14, fontweight='bold')
+ax.set_xticks(x)
+ax.set_xticklabels(categories_display, fontsize=9)
+ax.legend(loc='upper right', fontsize=11)
+ax.grid(axis='y', alpha=0.3)
+
+plt.tight_layout()
+plt.savefig('bar_graph_urban_rural.png', dpi=300, bbox_inches='tight')
+plt.show()
+print("2. Bar graph saved ✓")
+
+state_data = df[(df['Area'] == 'Total') & (df['State/UT'] != 'India')].copy()
+
+state_data['Current tobacco smokers (%)'] = pd.to_numeric(state_data['Current tobacco smokers (%)'], errors='coerce')
+state_data['Current smokeless tobacco users (%)'] = pd.to_numeric(state_data['Current smokeless tobacco users (%)'], errors='coerce')
+state_data['Ever tobacco users (%)'] = pd.to_numeric(state_data['Ever tobacco users (%)'], errors='coerce')
+
+state_data = state_data.dropna(subset=['Current tobacco smokers (%)', 'Current smokeless tobacco users (%)'])
+
+fig, ax = plt.subplots(figsize=(12, 8))
+
+scatter = ax.scatter(state_data['Current tobacco smokers (%)'], 
+                     state_data['Current smokeless tobacco users (%)'],
+                     s=state_data['Ever tobacco users (%)']*15,
+                     c=state_data['Ever tobacco users (%)'],
+                     cmap='viridis', alpha=0.7, edgecolors='black', linewidth=1)
+
+for _, row in state_data.iterrows():
+    if row['Current tobacco smokers (%)'] > 20 or row['Current smokeless tobacco users (%)'] > 20:
+        ax.annotate(row['State/UT'], 
+                    xy=(row['Current tobacco smokers (%)'], row['Current smokeless tobacco users (%)']),
+                    xytext=(5, 5), textcoords='offset points', fontsize=8)
+
+ax.set_xlabel('Current Tobacco Smokers (%)', fontsize=12, fontweight='bold')
+ax.set_ylabel('Current Smokeless Tobacco Users (%)', fontsize=12, fontweight='bold')
+ax.set_title('State-wise: Smoking vs Smokeless Tobacco Use', fontsize=14, fontweight='bold')
+ax.grid(True, alpha=0.3)
+
+cbar = plt.colorbar(scatter)
+cbar.set_label('Ever Tobacco Users (%)', fontsize=10)
+
+plt.tight_layout()
+plt.savefig('scatter_plot_correlation.png', dpi=300, bbox_inches='tight')
+plt.show()
+print("3. Scatter plot saved ✓")
+
+state_total = df[(df['Area'] == 'Total') & (df['State/UT'] != 'India')].copy()
+
+metrics = ['Ever tobacco users (%)', 'Current tobacco users (%)', 
+           'Ever tobacco smokers (%)', 'Current tobacco smokers (%)',
+           'Ever smokeless tobacco users (%)', 'Current smokeless tobacco users (%)']
+
+for metric in metrics:
+    state_total[metric] = pd.to_numeric(state_total[metric], errors='coerce')
+
+box_data = []
+labels = []
+for metric in metrics:
+    data = state_total[metric].dropna()
+    if len(data) > 0:
+        box_data.append(data)
+        labels.append(metric.replace(' (%)', ''))
+
+fig, ax = plt.subplots(figsize=(14, 7))
+
+bp = ax.boxplot(box_data, patch_artist=True, tick_labels=labels)
+
+colors = ['#ff9999', '#66b3ff', '#99ff99', '#ffcc99', '#c2c2f0', '#ffb3e6']
+for patch, color in zip(bp['boxes'], colors[:len(box_data)]):
+    patch.set_facecolor(color)
+    patch.set_alpha(0.7)
+
+ax.set_ylabel('Percentage (%)', fontsize=12, fontweight='bold')
+ax.set_title('Distribution of Tobacco Use Across Indian States', fontsize=14, fontweight='bold')
+ax.grid(axis='y', alpha=0.3)
+plt.xticks(rotation=45, ha='right')
+
+plt.tight_layout()
+plt.savefig('box_plot_distribution.png', dpi=300, bbox_inches='tight')
+plt.show()
+print("4. Box plot saved ✓")
+
+india_total = df[(df['State/UT'] == 'India') & (df['Area'] == 'Total')].iloc[0]
+
+pie_data = {
+    'Cigarette': float(india_total['Current cigarette users (%)']),
+    'Bidi': float(india_total['Current bidi users (%)']),
+    'Smokeless': float(india_total['Current smokeless tobacco users (%)'])
+}
+
+ever_users = float(india_total['Ever tobacco users (%)'])
+never_users = 100 - ever_users
+
+fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(14, 6))
+
+ax1.pie(pie_data.values(), labels=pie_data.keys(), autopct='%1.1f%%',
+        colors=['#e63946', '#f4a261', '#2a9d8f'], startangle=90, shadow=True)
+ax1.set_title('Current Tobacco Product Users', fontsize=12, fontweight='bold')
+
+ax2.pie([ever_users, never_users], labels=['Ever Users', 'Never Users'], 
+        autopct='%1.1f%%', colors=['#e63946', '#a8dadc'], explode=(0.05, 0), startangle=90, shadow=True)
+ax2.set_title('Overall Tobacco Usage in India', fontsize=12, fontweight='bold')
+
+plt.tight_layout()
+plt.savefig('pie_chart_composition.png', dpi=300, bbox_inches='tight')
+plt.show()
+print("5. Pie chart saved ✓")
+
+top5 = df[(df['Area'] == 'Total') & (df['State/UT'] != 'India')].copy()
+top5['Ever tobacco users (%)'] = pd.to_numeric(top5['Ever tobacco users (%)'], errors='coerce')
+top5 = top5.nlargest(5, 'Ever tobacco users (%)')
+
+stages = ['Ever Used', 'Current User', 'Tried to Quit\n(Smoking)', 'Tried to Quit\n(Smokeless)']
+
+fig, ax = plt.subplots(figsize=(14, 8))
+
+colors_step = ['#1d3557', '#457b9d', '#e63946', '#f4a261', '#2a9d8f']
+
+smoking_quit_col = None
+smokeless_quit_col = None
+
+for col in df.columns:
+    if 'smoking' in col.lower() and 'quit' in col.lower() and 'tried' in col.lower():
+        smoking_quit_col = col
+    if 'smokeless' in col.lower() and 'quit' in col.lower() and 'tried' in col.lower():
+        smokeless_quit_col = col
+
+for idx, (_, row) in enumerate(top5.iterrows()):
+    ever_val = float(row['Ever tobacco users (%)']) if pd.notna(row['Ever tobacco users (%)']) else 0
+    current_val = float(row['Current tobacco users (%)']) if pd.notna(row['Current tobacco users (%)']) else 0
+    
+    smoking_quit_val = 0
+    if smoking_quit_col and smoking_quit_col in row:
+        smoking_quit_val = float(row[smoking_quit_col]) if pd.notna(row[smoking_quit_col]) else 0
+    
+    smokeless_quit_val = 0
+    if smokeless_quit_col and smokeless_quit_col in row:
+        smokeless_quit_val = float(row[smokeless_quit_col]) if pd.notna(row[smokeless_quit_col]) else 0
+    
+    values = [ever_val, current_val, smoking_quit_val, smokeless_quit_val]
+    
+    ax.step(range(len(stages)), values, where='mid', linewidth=2.5, 
+            marker='o', markersize=8, label=row['State/UT'], color=colors_step[idx])
+
+ax.set_xticks(range(len(stages)))
+ax.set_xticklabels(stages, fontsize=11)
+ax.set_ylabel('Percentage (%)', fontsize=12, fontweight='bold')
+ax.set_title('Tobacco Use Progression: From Ever Use to Quit Attempts', fontsize=14, fontweight='bold')
+ax.legend(loc='upper right', fontsize=10)
+ax.grid(True, alpha=0.3, axis='y')
+ax.set_ylim(0, 100)
+
+plt.tight_layout()
+plt.savefig('step_chart_progression.png', dpi=300, bbox_inches='tight')
+plt.show()
+print("6. Step chart saved ✓")
+
+print("\n" + "="*50)
+print("✅ ALL 6 GRAPHS GENERATED SUCCESSFULLY!")
+print("="*50)
