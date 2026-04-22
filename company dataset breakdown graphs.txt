@@ -1,0 +1,495 @@
+"""
+Company Data Analysis and Visualization
+Runs on standard Python with common libraries
+"""
+
+import pandas as pd
+import matplotlib.pyplot as plt
+import numpy as np
+from pathlib import Path
+
+# Set style for better-looking charts (use default if seaborn not available)
+try:
+    import seaborn as sns
+    plt.style.use('seaborn-v0_8-darkgrid')
+    sns.set_palette("husl")
+    SEABORN_AVAILABLE = True
+except ImportError:
+    print("Note: seaborn not available, using matplotlib default styles")
+    plt.style.use('default')
+    SEABORN_AVAILABLE = False
+
+# File path
+file_path = r"D:\Companies_dataset.xlsx"
+
+# ============================================
+# 1. LOAD AND EXPLORE DATA
+# ============================================
+print("=" * 60)
+print("COMPANY DATA ANALYSIS")
+print("=" * 60)
+
+# Load the Excel file
+try:
+    df = pd.read_excel(file_path, engine='openpyxl')
+    print(f"\n✓ File loaded successfully!")
+    print(f"✓ Dataset shape: {df.shape[0]} rows × {df.shape[1]} columns")
+    print(f"\n✓ Column names: {df.columns.tolist()}")
+    
+    # Display first few rows
+    print("\n✓ First 5 rows of data:")
+    print(df.head())
+    
+except FileNotFoundError:
+    print(f"✗ Error: File not found at {file_path}")
+    print("Please check the file path and try again.")
+    exit()
+except ImportError:
+    print("✗ Error: Need to install openpyxl. Run: pip install openpyxl")
+    exit()
+except Exception as e:
+    print(f"✗ Error loading file: {e}")
+    exit()
+
+# ============================================
+# 2. FIND HEADQUARTER PLACE NAMES
+# ============================================
+print("\n" + "=" * 60)
+print("HEADQUARTER LOCATIONS")
+print("=" * 60)
+
+# Try to identify headquarters column (common names)
+hq_columns = ['headquarters', 'headquarter', 'hq', 'location', 'city', 'country', 
+              'address', 'based_in', 'headquarters_location']
+
+hq_col = None
+for col in hq_columns:
+    if col in df.columns:
+        hq_col = col
+        break
+
+# If no standard column found, try case-insensitive search
+if hq_col is None:
+    for col in df.columns:
+        if any(keyword in col.lower() for keyword in ['headquarter', 'hq', 'location', 'city']):
+            hq_col = col
+            break
+
+if hq_col:
+    print(f"\n✓ Headquarters column identified: '{hq_col}'")
+    print("\n✓ Unique headquarters locations:")
+    unique_hq = df[hq_col].dropna().unique()
+    for i, location in enumerate(unique_hq[:20], 1):  # Show first 20
+        print(f"   {i}. {location}")
+    if len(unique_hq) > 20:
+        print(f"   ... and {len(unique_hq) - 20} more locations")
+    
+    # Headquarters frequency
+    print("\n✓ Headquarters location frequency (Top 10):")
+    hq_counts = df[hq_col].value_counts().head(10)
+    for location, count in hq_counts.items():
+        print(f"   {location}: {count} companies")
+else:
+    print("\n⚠ Could not find headquarters column. Available columns:")
+    for col in df.columns:
+        print(f"   - {col}")
+
+# ============================================
+# 3. IDENTIFY COMPANY NAME COLUMN
+# ============================================
+name_columns = ['company', 'company_name', 'name', 'organization', 'brand', 
+                'title', 'entity_name']
+
+name_col = None
+for col in name_columns:
+    if col in df.columns:
+        name_col = col
+        break
+
+if name_col is None:
+    for col in df.columns:
+        if any(keyword in col.lower() for keyword in ['company', 'name', 'organization']):
+            name_col = col
+            break
+
+if name_col is None:
+    print("\n⚠ Could not find company name column. Using first column as index.")
+    name_col = df.columns[0]
+
+print(f"\n✓ Company name column: '{name_col}'")
+
+# ============================================
+# 4. IDENTIFY NUMERIC COLUMNS FOR ANALYSIS
+# ============================================
+numeric_cols = df.select_dtypes(include=[np.number]).columns.tolist()
+
+if len(numeric_cols) == 0:
+    print("\n⚠ No numeric columns found. Creating sample data for demonstration.")
+    # Create sample numeric data if none exists
+    np.random.seed(42)  # For reproducibility
+    df['revenue'] = np.random.randint(1000, 100000, len(df))
+    df['employees'] = np.random.randint(50, 50000, len(df))
+    df['market_cap'] = np.random.randint(100000, 10000000, len(df))
+    numeric_cols = ['revenue', 'employees', 'market_cap']
+    print(f"✓ Created sample metrics: {numeric_cols}")
+
+print(f"\n✓ Available numeric columns for analysis: {numeric_cols}")
+
+# Choose primary metric (usually revenue, valuation, or employees)
+primary_metric = None
+preferred_metrics = ['revenue', 'valuation', 'market_cap', 'employees', 'profit', 'sales']
+
+for metric in preferred_metrics:
+    if metric in numeric_cols:
+        primary_metric = metric
+        break
+
+if primary_metric is None and numeric_cols:
+    primary_metric = numeric_cols[0]
+
+print(f"✓ Using '{primary_metric}' as primary metric for rankings")
+
+# ============================================
+# 5. PREPARE TOP 10 COMPANIES DATA
+# ============================================
+# Get top 10 companies by primary metric
+if hq_col:
+    top_10 = df.nlargest(10, primary_metric)[[name_col, primary_metric, hq_col]].copy()
+else:
+    top_10 = df.nlargest(10, primary_metric)[[name_col, primary_metric]].copy()
+
+top_10 = top_10.dropna(subset=[primary_metric])
+
+print("\n" + "=" * 60)
+print(f"TOP 10 COMPANIES BY {primary_metric.upper()}")
+print("=" * 60)
+for idx, row in top_10.iterrows():
+    rank = top_10.index.get_loc(idx) + 1
+    company_name = str(row[name_col])[:40]  # Truncate long names
+    value = row[primary_metric]
+    if hq_col:
+        hq = str(row[hq_col])[:30] if pd.notna(row[hq_col]) else "N/A"
+        print(f"{rank:2}. {company_name:<40} | {value:>15,.0f} | {hq}")
+    else:
+        print(f"{rank:2}. {company_name:<40} | {value:>15,.0f}")
+
+# Top 5 for pie chart
+top_5 = top_10.head(5)
+
+# ============================================
+# 6. CREATE VISUALIZATIONS
+# ============================================
+
+# Check if we have data to plot
+if len(top_10) == 0:
+    print("\n✗ No data available for visualization. Exiting.")
+    exit()
+
+print("\n" + "=" * 60)
+print("GENERATING VISUALIZATIONS")
+print("=" * 60)
+
+# Create a figure with subplots
+fig = plt.figure(figsize=(20, 16))
+fig.suptitle(f'Company Analysis Dashboard - Ranked by {primary_metric.replace("_", " ").title()}', 
+             fontsize=20, fontweight='bold', y=0.98)
+
+# Color schemes
+colors_bar = plt.cm.viridis(np.linspace(0, 1, 10))
+colors_pie = plt.cm.Set3(np.linspace(0, 1, 5))
+
+# --------------------------------------------
+# CHART 1: FUNNEL CHART (Top 10)
+# --------------------------------------------
+ax1 = fig.add_subplot(3, 2, 1)
+values = top_10[primary_metric].values
+names = [str(name)[:20] for name in top_10[name_col].values]
+
+# Create funnel effect
+widths = values / values.max()  # Normalize widths
+
+# Create colored bars
+for i, (width, name, val) in enumerate(zip(widths, names, values)):
+    ax1.barh(i, width, color=colors_bar[i], height=0.8, 
+             edgecolor='white', linewidth=2)
+    ax1.text(width + 0.02, i, f'{val:,.0f}', va='center', fontsize=9, fontweight='bold')
+    ax1.text(-0.05, i, name, va='center', ha='right', fontsize=9, fontweight='bold')
+
+ax1.set_yticks([])
+ax1.set_xlim(0, 1.1)
+ax1.set_xlabel('Relative Size (Normalized)', fontsize=11)
+ax1.set_title(f'Funnel Chart: Top 10 Companies by {primary_metric.replace("_", " ").title()}', 
+              fontsize=13, fontweight='bold', pad=15)
+ax1.grid(axis='x', alpha=0.3)
+
+# Add rank labels on the left
+for i in range(len(values)):
+    ax1.text(-0.15, i, f'#{i+1}', va='center', ha='right', 
+             fontsize=9, fontweight='bold', color='gray')
+
+# --------------------------------------------
+# CHART 2: BAR CHART (Top 10)
+# --------------------------------------------
+ax2 = fig.add_subplot(3, 2, 2)
+bars = ax2.barh(names, values, color=colors_bar, edgecolor='black', linewidth=1)
+ax2.set_xlabel(primary_metric.replace('_', ' ').title(), fontsize=11)
+ax2.set_title(f'Bar Chart: Top 10 Companies by {primary_metric.replace("_", " ").title()}', 
+              fontsize=13, fontweight='bold', pad=15)
+ax2.grid(axis='x', alpha=0.3)
+
+# Add value labels on bars
+for bar, val in zip(bars, values):
+    ax2.text(val, bar.get_y() + bar.get_height()/2, 
+             f'  {val:,.0f}', va='center', fontsize=9, fontweight='bold')
+
+# Invert y-axis to show highest at top
+ax2.invert_yaxis()
+
+# --------------------------------------------
+# CHART 3: LINE CHART (Top 10)
+# --------------------------------------------
+ax3 = fig.add_subplot(3, 2, 3)
+ranks = list(range(1, len(values) + 1))
+ax3.plot(ranks, values, marker='o', linewidth=2.5, markersize=10, 
+         color='#2E86AB', markerfacecolor='#A23B72', markeredgewidth=2)
+ax3.fill_between(ranks, values, alpha=0.2, color='#2E86AB')
+ax3.set_xticks(ranks)
+ax3.set_xlabel('Rank', fontsize=11)
+ax3.set_ylabel(primary_metric.replace('_', ' ').title(), fontsize=11)
+ax3.set_title(f'Line Chart: Top 10 Companies by {primary_metric.replace("_", " ").title()}', 
+              fontsize=13, fontweight='bold', pad=15)
+ax3.grid(True, alpha=0.3, linestyle='--')
+
+# Add value labels on points
+for rank, val in zip(ranks, values):
+    ax3.annotate(f'{val:,.0f}', (rank, val), textcoords="offset points", 
+                xytext=(0, 10), ha='center', fontsize=8, fontweight='bold')
+
+# --------------------------------------------
+# CHART 4: PIE CHART (Top 5)
+# --------------------------------------------
+ax4 = fig.add_subplot(3, 2, 4)
+pie_values = top_5[primary_metric].values
+pie_labels = [str(name)[:25] for name in top_5[name_col].values]
+
+# Create pie chart
+wedges, texts, autotexts = ax4.pie(pie_values, labels=pie_labels, autopct='%1.1f%%',
+                                    colors=colors_pie[:len(pie_values)], startangle=90,
+                                    textprops={'fontsize': 9, 'fontweight': 'bold'},
+                                    pctdistance=0.85)
+
+# Style the percentage text
+for autotext in autotexts:
+    autotext.set_color('white')
+    autotext.set_fontweight('bold')
+    autotext.set_fontsize(10)
+
+ax4.set_title(f'Pie Chart: Top 5 Companies by {primary_metric.replace("_", " ").title()}\n(Share Distribution)', 
+              fontsize=13, fontweight='bold', pad=15)
+
+# Add legend with values
+legend_labels = [f'{label} ({val:,.0f})' for label, val in zip(pie_labels, pie_values)]
+ax4.legend(wedges, legend_labels, title=primary_metric.replace('_', ' ').title(),
+          loc="center left", bbox_to_anchor=(1, 0, 0.5, 1), fontsize=8)
+
+# --------------------------------------------
+# CHART 5: HORIZONTAL BAR CHART (Alternative view)
+# --------------------------------------------
+ax5 = fig.add_subplot(3, 2, 5)
+# Create a more detailed bar chart with color gradient
+norm = plt.Normalize(values.min(), values.max())
+colors_bar_detail = plt.cm.RdYlGn_r(norm(values))
+
+bars2 = ax5.barh(range(len(values)), values, color=colors_bar_detail, edgecolor='black', linewidth=0.5)
+ax5.set_yticks(range(len(values)))
+ax5.set_yticklabels(names, fontsize=9)
+ax5.set_xlabel(primary_metric.replace('_', ' ').title(), fontsize=11)
+ax5.set_title(f'Detailed Bar Chart: Top 10 Companies\n(Colored by Value Intensity)', 
+              fontsize=13, fontweight='bold', pad=15)
+ax5.grid(axis='x', alpha=0.3)
+ax5.invert_yaxis()
+
+# Add value labels
+for i, (bar, val) in enumerate(zip(bars2, values)):
+    ax5.text(val, bar.get_y() + bar.get_height()/2, 
+             f'  {val:,.0f}', va='center', fontsize=9, fontweight='bold')
+
+# --------------------------------------------
+# CHART 6: HEADQUARTERS DISTRIBUTION (if available)
+# --------------------------------------------
+ax6 = fig.add_subplot(3, 2, 6)
+
+if hq_col and len(df[hq_col].dropna()) > 0:
+    # Get top headquarters by company count
+    hq_distribution = df[hq_col].value_counts().head(8)
+    
+    if len(hq_distribution) > 0:
+        colors_hq = plt.cm.Paired(np.linspace(0, 1, len(hq_distribution)))
+        bars_hq = ax6.barh(range(len(hq_distribution)), hq_distribution.values, 
+                           color=colors_hq, edgecolor='black')
+        ax6.set_yticks(range(len(hq_distribution)))
+        ax6.set_yticklabels([str(label)[:30] for label in hq_distribution.index], fontsize=8)
+        ax6.set_xlabel('Number of Companies', fontsize=11)
+        ax6.set_title('Top Headquarters Locations\n(by Company Count)', 
+                     fontsize=13, fontweight='bold', pad=15)
+        ax6.grid(axis='x', alpha=0.3)
+        
+        # Add value labels
+        for bar, val in zip(bars_hq, hq_distribution.values):
+            ax6.text(val, bar.get_y() + bar.get_height()/2, 
+                    f'  {val}', va='center', fontsize=9, fontweight='bold')
+        
+        ax6.invert_yaxis()
+    else:
+        ax6.text(0.5, 0.5, 'Insufficient headquarters data\nfor visualization', 
+                ha='center', va='center', transform=ax6.transAxes, fontsize=12)
+        ax6.set_title('Headquarters Distribution', fontsize=13, fontweight='bold', pad=15)
+else:
+    ax6.text(0.5, 0.5, 'Headquarters location data\nnot available', 
+            ha='center', va='center', transform=ax6.transAxes, fontsize=12)
+    ax6.set_title('Headquarters Distribution', fontsize=13, fontweight='bold', pad=15)
+
+# Adjust layout
+plt.tight_layout()
+plt.subplots_adjust(top=0.95, hspace=0.3, wspace=0.3)
+
+# Save the figure
+try:
+    output_path = r"D:\company_analysis_dashboard.png"
+    plt.savefig(output_path, dpi=300, bbox_inches='tight', facecolor='white')
+    print(f"\n✓ Dashboard saved to: {output_path}")
+except Exception as e:
+    print(f"\n⚠ Could not save dashboard: {e}")
+
+# Show the plot
+plt.show()
+
+# ============================================
+# 7. GENERATE INDIVIDUAL CHARTS
+# ============================================
+print("\n" + "=" * 60)
+print("GENERATING INDIVIDUAL CHARTS")
+print("=" * 60)
+
+# Individual Funnel Chart
+try:
+    fig2, ax = plt.subplots(figsize=(12, 8))
+    values = top_10[primary_metric].values
+    names = [str(name)[:20] for name in top_10[name_col].values]
+    widths = values / values.max()
+
+    for i, (width, name, val) in enumerate(zip(widths, names, values)):
+        ax.barh(i, width, color=plt.cm.plasma(i/10), height=0.8, edgecolor='white', linewidth=2)
+        ax.text(width + 0.02, i, f'{val:,.0f}', va='center', fontsize=10, fontweight='bold')
+        ax.text(-0.05, i, name, va='center', ha='right', fontsize=10, fontweight='bold')
+        ax.text(-0.15, i, f'#{i+1}', va='center', ha='right', fontsize=9, fontweight='bold', color='gray')
+
+    ax.set_yticks([])
+    ax.set_xlim(0, 1.1)
+    ax.set_xlabel('Relative Size (Normalized)', fontsize=12)
+    ax.set_title(f'Funnel Chart: Top 10 Companies by {primary_metric.replace("_", " ").title()}', 
+                 fontsize=16, fontweight='bold', pad=20)
+    ax.grid(axis='x', alpha=0.3)
+    plt.tight_layout()
+    plt.savefig(r"D:\funnel_chart_top10.png", dpi=300, bbox_inches='tight')
+    plt.close()
+    print("✓ Funnel chart saved: funnel_chart_top10.png")
+except Exception as e:
+    print(f"⚠ Could not save funnel chart: {e}")
+
+# Individual Bar Chart
+try:
+    fig3, ax = plt.subplots(figsize=(12, 8))
+    bars = ax.barh(names, values, color=plt.cm.viridis(np.linspace(0, 1, 10)), edgecolor='black')
+    ax.set_xlabel(primary_metric.replace('_', ' ').title(), fontsize=12)
+    ax.set_title(f'Bar Chart: Top 10 Companies by {primary_metric.replace("_", " ").title()}', 
+                 fontsize=16, fontweight='bold', pad=20)
+    ax.grid(axis='x', alpha=0.3)
+    ax.invert_yaxis()
+
+    for bar, val in zip(bars, values):
+        ax.text(val, bar.get_y() + bar.get_height()/2, f'  {val:,.0f}', 
+                va='center', fontsize=10, fontweight='bold')
+    plt.tight_layout()
+    plt.savefig(r"D:\bar_chart_top10.png", dpi=300, bbox_inches='tight')
+    plt.close()
+    print("✓ Bar chart saved: bar_chart_top10.png")
+except Exception as e:
+    print(f"⚠ Could not save bar chart: {e}")
+
+# Individual Line Chart
+try:
+    fig4, ax = plt.subplots(figsize=(12, 8))
+    ranks = list(range(1, len(values) + 1))
+    ax.plot(ranks, values, marker='o', linewidth=3, markersize=12, 
+            color='#2E86AB', markerfacecolor='#A23B72', markeredgewidth=2)
+    ax.fill_between(ranks, values, alpha=0.2, color='#2E86AB')
+    ax.set_xticks(ranks)
+    ax.set_xlabel('Rank', fontsize=12)
+    ax.set_ylabel(primary_metric.replace('_', ' ').title(), fontsize=12)
+    ax.set_title(f'Line Chart: Top 10 Companies by {primary_metric.replace("_", " ").title()}', 
+                 fontsize=16, fontweight='bold', pad=20)
+    ax.grid(True, alpha=0.3, linestyle='--')
+
+    for rank, val in zip(ranks, values):
+        ax.annotate(f'{val:,.0f}', (rank, val), textcoords="offset points", 
+                   xytext=(0, 10), ha='center', fontsize=9, fontweight='bold')
+    plt.tight_layout()
+    plt.savefig(r"D:\line_chart_top10.png", dpi=300, bbox_inches='tight')
+    plt.close()
+    print("✓ Line chart saved: line_chart_top10.png")
+except Exception as e:
+    print(f"⚠ Could not save line chart: {e}")
+
+# Individual Pie Chart
+try:
+    fig5, ax = plt.subplots(figsize=(10, 10))
+    pie_values = top_5[primary_metric].values
+    pie_labels = [str(name)[:25] for name in top_5[name_col].values]
+
+    wedges, texts, autotexts = ax.pie(pie_values, labels=pie_labels, autopct='%1.1f%%',
+                                       colors=plt.cm.Set3(np.linspace(0, 1, len(pie_values))),
+                                       startangle=90, textprops={'fontsize': 10})
+
+    for autotext in autotexts:
+        autotext.set_color('white')
+        autotext.set_fontweight('bold')
+        autotext.set_fontsize(11)
+
+    ax.set_title(f'Pie Chart: Top 5 Companies by {primary_metric.replace("_", " ").title()}', 
+                 fontsize=16, fontweight='bold', pad=20)
+    plt.tight_layout()
+    plt.savefig(r"D:\pie_chart_top5.png", dpi=300, bbox_inches='tight')
+    plt.close()
+    print("✓ Pie chart saved: pie_chart_top5.png")
+except Exception as e:
+    print(f"⚠ Could not save pie chart: {e}")
+
+# ============================================
+# 8. SUMMARY REPORT
+# ============================================
+print("\n" + "=" * 60)
+print("ANALYSIS SUMMARY")
+print("=" * 60)
+print(f"\n✓ Input file: {file_path}")
+print(f"✓ Total companies analyzed: {len(df)}")
+print(f"✓ Ranking metric: {primary_metric}")
+print(f"✓ Top company: {top_10.iloc[0][name_col]} ({top_10.iloc[0][primary_metric]:,.0f})")
+if len(top_10) >= 10:
+    print(f"✓ #10 company: {top_10.iloc[-1][name_col]} ({top_10.iloc[-1][primary_metric]:,.0f})")
+
+if hq_col:
+    most_common_hq = df[hq_col].mode().iloc[0] if len(df[hq_col].mode()) > 0 else "N/A"
+    hq_count = df[hq_col].value_counts().iloc[0] if len(df[hq_col].value_counts()) > 0 else 0
+    print(f"\n✓ Most common headquarters: {most_common_hq} ({hq_count} companies)")
+
+print("\n" + "=" * 60)
+print("✓ All visualizations generated successfully!")
+print("=" * 60)
+print("\n Output files saved to D:\\")
+print("   • company_analysis_dashboard.png (combined dashboard)")
+print("   • funnel_chart_top10.png")
+print("   • bar_chart_top10.png")
+print("   • line_chart_top10.png")
+print("   • pie_chart_top5.png")
+print("\n" + "=" * 60)
